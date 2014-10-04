@@ -9,6 +9,7 @@ from numpy import pi
 from sys import argv
 from copy import deepcopy
 from time import sleep
+from random import random
 
 
 class armThread(threading.Thread):
@@ -51,18 +52,24 @@ class sensorThread (threading.Thread):
 
     def run(self):
         while 1:
-            flag = self.capture_video()
+            s1 = random() * 255
+            s2 = random() * 255
+            flag = self.display_video(s1, s2)
 
             sleep(0.1)
 
             if flag:
                 break
 
-    def capture_video(self):
+    # Assumes the sensors are 0-255 integers off the Arduino
+    def display_video(self, left_sense, right_sense):
         ret, frame = self.cap.read()
+        height, width = frame.shape[:2]
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         color = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+        display_img = frame
+
         edges = cv2.Canny(gray, 50, 150, apertureSize = 3)
         minLineLength = 500
         maxLineGap = 25
@@ -70,14 +77,24 @@ class sensorThread (threading.Thread):
         try:
             for line in lines:
                 for x1, y1, x2, y2 in line:
-                    cv2.line(color, (x1, y1), (x2, y2), (0, 255, 0), 4)
+                    cv2.line(display_img, (x1, y1), (x2, y2), (0, 255, 0), 4)
         except TypeError:
             pass
-            # print "Got an empy line variable"
+
+        # cv2.rectangle(img, pt1, pt2, color, thickness)
+        rec_color = (255, 0, 200)
+        rec_thick = 35
+        scale = 1.8
+        cv2.rectangle(display_img, (rec_thick / 2, height),
+                      (rec_thick / 2, height - int(left_sense * scale)),
+                      rec_color, rec_thick)
+        cv2.rectangle(display_img, (width - rec_thick / 2, height),
+                      (width - rec_thick / 2, height - int(right_sense * scale)),
+                      rec_color, rec_thick)
 
         # Display the resulting frame
-        cv2.imshow('frame', frame)
-        cv2.imshow('color', color)
+        # cv2.imshow('frame', frame)
+        cv2.imshow('display_image', display_img)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return True
