@@ -26,31 +26,38 @@ class armThread(threading.Thread):
         #     pass # self.ser = serial.Serial('/dev/ttyACM1', 9600)
 
     def run(self):
-        # arduino = Arduino('/dev/ttyACM0')
-        arduino = Arduino('/dev/ttyACM1')
+        try:
+            arduino = Arduino('/dev/ttyACM0')
+        except:
+            arduino = Arduino('/dev/ttyACM1')
+
+        motorA = 2
+        motorB = 4
+        servo = 0
+        arduino.output([motorA, motorB])
 
         while 1:
             key = self.getKey()
             if key == '\x03':
-                arduino.analogWrite(5, 0)
-                arduino.analogWrite(6, 0)
+                arduino.setLow(motorA)
+                arduino.setHigh(motorB)
                 break
 
             if key == 'a':
-                arduino.setServo(0,127) # limit because converted to char on arduino
+                arduino.setServo(servo, 127) # limit because converted to char on arduino
             elif key == 'd':
-                arduino.setServo(0,0)
+                arduino.setServo(servo, 0)
             elif key == 'w':
-                arduino.analogWrite(3, 255)
-                arduino.analogWrite(6, 0)
+                arduino.setHigh(motorA)
+                arduino.setLow(motorB)
             elif key == 'x':
-                arduino.analogWrite(3, 0)
-                arduino.analogWrite(6, 255)
+                arduino.setLow(motorA)
+                arduino.setHigh(motorB)
             else:
-                arduino.analogWrite(3, 0)
-                arduino.analogWrite(6, 0)
+                arduino.setLow(motorA)
+                arduino.setLow(motorB)
 
-            print "Got a key!"
+            print "Got a key!: " + key
 
     def getKey(self):
         tty.setraw(sys.stdin.fileno())

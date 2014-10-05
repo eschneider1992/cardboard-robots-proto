@@ -18,10 +18,6 @@ void setup() {
 
     Serial.begin(SERIAL_RATE);
     Serial.setTimeout(SERIAL_TIMEOUT);
-    
-    int dc0 = 3;
-    int dc1 = 5;
-    int dc2 = 6;
 
     servo0.attach(9);
     servo1.attach(10);
@@ -31,38 +27,45 @@ void setup() {
     for (int i = 0; i < cmd; i++) {
         pinMode(readData(), OUTPUT);
     }
-
-    pinMode(dc0, OUTPUT);
-    pinMode(dc1, OUTPUT);
-    pinMode(dc2, OUTPUT);
 }
 
 void loop() {
     switch (readData()) {
         case 0 :
+            Serial.println("Got into 0 case!");
             //set digital low
             digitalWrite(readData(), LOW); break;
         case 1 :
+            Serial.println("Got into 1 case!");
             //set digital high
             digitalWrite(readData(), HIGH); break;
         case 2 :
+            Serial.println("Got into 2 case!");
             //get digital value
             Serial.println(digitalRead(readData())); break;
         case 3 :
+            Serial.println("Got into 3 case!");
             // set analog value
             analogWrite(readData(), readData()); break;
         case 4 :
+            Serial.println("Got into 4 case!");
             //read analog value
             Serial.println(analogRead(readData())); break;
         case 5 :
+            Serial.println("Got into servo case!");
             //read analog value
             switch(readData()){
                 case 0:
+                    Serial.println("Got into 5:0 case!");
                     servo0.write(readData());
+                    Serial.println("Wrote a thing\n");
+                    break;
                 case 1:
                     servo1.write(readData());
+                    break;
                 case 2:
                     servo2.write(readData());
+                    break;
             }
         case 99:
             //just dummy to cancel the current read, needed to prevent lock 
