@@ -53,7 +53,7 @@ class Arduino(object):
             self.setLow(each_pin)
         return True
 
-    def setServo(self,servo, value):
+    def setServo(self, servo, value):
         self.__sendData('5')
         self.__sendData(servo)
         self.__sendData(int(value))

@@ -56,10 +56,7 @@ class Arduino(object):
     def setServo(self, servo, value):
         self.__sendData('5')
         self.__sendData(servo)
-        print "Stuff: "
-        print servo
         self.__sendData(int(value))
-        print int(value)
 
 
     def __sendData(self, serial_data):

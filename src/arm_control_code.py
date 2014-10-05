@@ -4,6 +4,7 @@ import cv2
 import serial
 import sys, select, termios, tty
 import threading
+import time
 
 from numpy import pi
 from sys import argv
@@ -13,49 +14,35 @@ from random import random
 from arduino import Arduino
 
 
+
 class armThread(threading.Thread):
-    def __init__(self, threadID, name):
+    def __init__(self, threadID, name, arduino):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
+        self.arduino = arduino
         self.settings = termios.tcgetattr(sys.stdin)
-        
-        # try:
-        #     self.ser = serial.Serial('/dev/ttyACM0', 9600)
-        # except:
-        #     pass # self.ser = serial.Serial('/dev/ttyACM1', 9600)
 
     def run(self):
-        try:
-            arduino = Arduino('/dev/ttyACM0')
-        except:
-            arduino = Arduino('/dev/ttyACM1')
-
-        motorA = 2
-        motorB = 4
-        servo = 0
-        arduino.output([motorA, motorB])
+        servo_pwm = 0
+        motor_pwm = 1
 
         while 1:
             key = self.getKey()
             if key == '\x03':
-                arduino.setLow(motorA)
-                arduino.setHigh(motorB)
+                self.arduino.setServo(motor_pwm, 90)
                 break
 
             if key == 'a':
-                arduino.setServo(servo, 127) # limit because converted to char on arduino
+                self.arduino.setServo(servo_pwm, 127) # limit because converted to char on arduino
             elif key == 'd':
-                arduino.setServo(servo, 0)
+                self.arduino.setServo(servo_pwm, 0)
             elif key == 'w':
-                arduino.setHigh(motorA)
-                arduino.setLow(motorB)
+                self.arduino.setServo(motor_pwm, 127)
             elif key == 'x':
-                arduino.setLow(motorA)
-                arduino.setHigh(motorB)
+                self.arduino.setServo(motor_pwm, 53)
             else:
-                arduino.setLow(motorA)
-                arduino.setLow(motorB)
+                self.arduino.setServo(motor_pwm, 90)
 
             print "Got a key!: " + key
 
@@ -67,13 +54,12 @@ class armThread(threading.Thread):
         return key
 
 
-
-
 class sensorThread (threading.Thread):
-    def __init__(self, threadID, name):
+    def __init__(self, threadID, name, arduino):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
+        self.arduino = arduino
         try:
             self.cap = cv2.VideoCapture(1)
         except:
@@ -82,8 +68,12 @@ class sensorThread (threading.Thread):
     def run(self):
         flag = False
         while 1:
-            s1 = random() * 255
-            s2 = random() * 255
+            try:
+                s1 = float(self.arduino.analogRead(0))
+                s2 = float(self.arduino.analogRead(1))
+            except:
+                s1 = 0
+                s2 = 0
             try:
                 flag = self.display_video(s1, s2)
             except AttributeError:
@@ -117,10 +107,14 @@ class sensorThread (threading.Thread):
         # cv2.rectangle(img, pt1, pt2, color, thickness)
         rec_color = (255, 0, 200)
         rec_thick = 35
-        scale = 1.8
-        cv2.rectangle(display_img, (rec_thick / 2, height),
-                      (rec_thick / 2, height - int(left_sense * scale)),
-                      rec_color, rec_thick)
+        scale = 0.62 # sensitivity of distance sensors
+
+        p1 = (rec_thick / 2, height)
+        p2 = (rec_thick / 2, height - int(left_sense * scale))
+        cv2.rectangle(display_img, p1, p2, rec_color, rec_thick)
+        
+        p1 = (width - rec_thick / 2, height)
+        p2 = (width - rec_thick / 2, height - int(right_sense * scale))
         cv2.rectangle(display_img, (width - rec_thick / 2, height),
                       (width - rec_thick / 2, height - int(right_sense * scale)),
                       rec_color, rec_thick)
@@ -129,17 +123,24 @@ class sensorThread (threading.Thread):
         # cv2.imshow('frame', frame)
         cv2.imshow('display_image', display_img)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            return True
-        else:
-            return False
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     return True
+        # else:
+        #     return False
 
 
 if __name__ == '__main__':
+    try:
+        arduino = Arduino('/dev/ttyACM0')
+    except:
+        arduino = Arduino('/dev/ttyACM1')
+    arduino.output([2]) # This is a default to keep from hanging in setup
+
+
     print "Starting the arm thread"
-    arm = armThread(1, "Arm thread")
+    arm = armThread(1, "Arm thread", arduino)
     print "Starting the sensor thread"
-    sensor = sensorThread(2, "Sensor thread")
+    sensor = sensorThread(2, "Sensor thread", arduino)
     
     sensor.start()
     arm.start()
