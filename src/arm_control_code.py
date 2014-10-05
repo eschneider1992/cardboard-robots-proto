@@ -10,6 +10,7 @@ from sys import argv
 from copy import deepcopy
 from time import sleep
 from random import random
+from arduino import Arduino
 
 
 class armThread(threading.Thread):
@@ -18,20 +19,36 @@ class armThread(threading.Thread):
         self.threadID = threadID
         self.name = name
         self.settings = termios.tcgetattr(sys.stdin)
-        try:
-            self.ser = serial.Serial('/dev/ttyACM0', 9600)
-        except:
-            pass # self.ser = serial.Serial('/dev/ttyACM1', 9600)
+        
+        # try:
+        #     self.ser = serial.Serial('/dev/ttyACM0', 9600)
+        # except:
+        #     pass # self.ser = serial.Serial('/dev/ttyACM1', 9600)
 
     def run(self):
+        # arduino = Arduino('/dev/ttyACM0')
+        arduino = Arduino('/dev/ttyACM1')
+
         while 1:
             key = self.getKey()
             if key == '\x03':
+                arduino.analogWrite(5, 0)
+                arduino.analogWrite(6, 0)
                 break
 
-            if key == 'w' or key == 's' or key == 'd' or key == 'a':
-                print "Would have printed " + key
-                # self.ser.write(key)
+            if key == 'a':
+                arduino.setServo(0,127) # limit because converted to char on arduino
+            elif key == 'd':
+                arduino.setServo(0,0)
+            elif key == 'w':
+                arduino.analogWrite(3, 255)
+                arduino.analogWrite(6, 0)
+            elif key == 'x':
+                arduino.analogWrite(3, 0)
+                arduino.analogWrite(6, 255)
+            else:
+                arduino.analogWrite(3, 0)
+                arduino.analogWrite(6, 0)
 
             print "Got a key!"
 
@@ -43,18 +60,27 @@ class armThread(threading.Thread):
         return key
 
 
+
+
 class sensorThread (threading.Thread):
     def __init__(self, threadID, name):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
-        self.cap = cv2.VideoCapture(1)
+        try:
+            self.cap = cv2.VideoCapture(1)
+        except:
+            pass
 
     def run(self):
+        flag = False
         while 1:
             s1 = random() * 255
             s2 = random() * 255
-            flag = self.display_video(s1, s2)
+            try:
+                flag = self.display_video(s1, s2)
+            except AttributeError:
+                flag = True
 
             sleep(0.1)
 
@@ -103,7 +129,9 @@ class sensorThread (threading.Thread):
 
 
 if __name__ == '__main__':
+    print "Starting the arm thread"
     arm = armThread(1, "Arm thread")
+    print "Starting the sensor thread"
     sensor = sensorThread(2, "Sensor thread")
     
     sensor.start()
